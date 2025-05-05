@@ -1,0 +1,71 @@
+import re
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics import classification_report
+
+data = {
+    'text': [
+        "I love this product!",
+        "I'm so sad today.",
+        "Terrible experience, very disappointed.",
+        "Feeling excited about the trip!",
+        "It was okay, not great.",
+        "So angry with the service!",
+        "What a beautiful day!",
+        "I'm heartbroken right now.",
+        "Absolutely furious with what happened.",
+        "Can't wait for the vacation!",
+        "This is so frustrating.",
+        "I'm feeling down.",
+        "Best day ever!",
+        "It's all just meh.",
+        "Why is everything going wrong today?",
+        "I am thrilled with the results!",
+        "This makes me feel sick.",
+        "Such a joyful moment.",
+        "I'm so depressed.",
+        "Really grateful for today.",
+        "That smell is so awful."
+    ],
+    'emotion': [
+        'joy', 'sadness', 'anger', 'joy', 'neutral',
+        'anger', 'joy', 'sadness', 'anger', 'joy',
+        'anger', 'sadness', 'joy', 'neutral', 'sadness',
+        'joy', 'disgust', 'joy', 'sadness', 'joy',
+        'disgust'
+    ]
+}
+df = pd.DataFrame(data)
+
+def preprocess(text):
+    text = text.lower()
+    text = re.sub(r"http\S+|www\S+|https\S+", '', text)
+    text = re.sub(r'\W', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+df['cleaned_text'] = df['text'].apply(preprocess)
+
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(df['cleaned_text'])
+y = df['emotion']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+model = MultinomialNB()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+print(classification_report(y_test, y_pred, zero_division=0))
+
+def predict_emotion(text):
+    cleaned = preprocess(text)
+    vectorized = vectorizer.transform([cleaned])
+    return model.predict(vectorized)[0]
+
+example = "I'm feeling very nervous about tomorrow."
+print(f"Predicted emotion: {predict_emotion(example)}")
