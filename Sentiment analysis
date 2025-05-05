@@ -1,0 +1,93 @@
+import re
+ import pandas as pd
+ from sklearn.model_selection import train_test_split
+ from sklearn.naive_bayes import MultinomialNB
+ from sklearn.feature_extraction.text import TfidfVectorizer
+ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+ import matplotlib.pyplot as plt
+ 
+ # ----- Sample Dataset -----
+ data = {
+     'text': [
+         "I love this product!",
+         "I'm so sad today.",
+         "Terrible experience, very disappointed.",
+         "Feeling excited about the trip!",
+         "It was okay, not great.",
+         "So angry with the service!",
+         "What a beautiful day!",
+         "I'm heartbroken right now.",
+         "Absolutely furious with what happened.",
+         "Can't wait for the vacation!",
+         "This is so frustrating.",
+         "I'm feeling down.",
+         "Best day ever!",
+         "It's all just meh.",
+         "Why is everything going wrong today?",
+         "I am thrilled with the results!",
+         "This makes me feel sick.",
+         "Such a joyful moment.",
+         "I'm so depressed.",
+         "Really grateful for today.",
+         "That smell is so awful."
+     ],
+     'emotion': [
+         'joy', 'sadness', 'anger', 'joy', 'neutral',
+         'anger', 'joy', 'sadness', 'anger', 'joy',
+         'anger', 'sadness', 'joy', 'neutral', 'sadness',
+         'joy', 'disgust', 'joy', 'sadness', 'joy',
+         'disgust'
+     ]
+ }
+ 
+ df = pd.DataFrame(data)
+ 
+ # ----- Preprocessing Function -----
+ def preprocess(text):
+     text = text.lower()
+     text = re.sub(r"http\S+|www\S+|https\S+", '', text)
+     text = re.sub(r'[^a-zA-Z\s]', ' ', text)
+     text = re.sub(r'\s+', ' ', text).strip()
+     return text
+ 
+ df['cleaned_text'] = df['text'].apply(preprocess)
+ 
+ # ----- Vectorization -----
+ vectorizer = TfidfVectorizer(ngram_range=(1,2))  # Use unigrams and bigrams
+ X = vectorizer.fit_transform(df['cleaned_text'])
+ y = df['emotion']
+ 
+ # ----- Train/Test Split -----
+ X_train, X_test, y_train, y_test = train_test_split(
+     X, y, test_size=0.2, random_state=42, stratify=y
+ )
+ 
+ # ----- Model Training -----
+ model = MultinomialNB()
+ model.fit(X_train, y_train)
+ 
+ # ----- Evaluation -----
+ y_pred = model.predict(X_test)
+ 
+ print("\n📊 Classification Report:")
+ print(classification_report(y_test, y_pred, zero_division=0))
+ 
+ # ----- Confusion Matrix -----
+ cm = confusion_matrix(y_test, y_pred, labels=model.classes_)
+ disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
+ disp.plot(cmap="Blues")
+ plt.title("Confusion Matrix")
+ plt.show()
+ 
+ # ----- Emotion Prediction Function -----
+ def predict_emotion(text):
+     cleaned = preprocess(text)
+     vectorized = vectorizer.transform([cleaned])
+     pred = model.predict(vectorized)[0]
+     proba = model.predict_proba(vectorized).max()
+     return pred, round(proba, 3)
+ 
+ # ----- Example Prediction -----
+ example = "I'm feeling very nervous about tomorrow."
+ pred, confidence = predict_emotion(example)
+ print(f"\n🧠 Predicted emotion: {pred} (Confidence: {confidence})")
